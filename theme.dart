@@ -37,6 +37,9 @@ final darkTheme = ThemeData(
   ),
   visualDensity: VisualDensity.adaptivePlatformDensity,
   dividerTheme: DividerThemeData(
+    space: 0,
+    endIndent: 0,
+    indent: 0,
     color: Colors.lightBlue[800],
   ),
   dataTableTheme: DataTableThemeData(
@@ -75,6 +78,9 @@ final lightTheme = ThemeData(
     foregroundColor: Colors.white,
   ),
   dividerTheme: DividerThemeData(
+    space: 0,
+    endIndent: 0,
+    indent: 0,
     color: Colors.lightBlue[800],
   ),
   dataTableTheme: DataTableThemeData(
