@@ -66,7 +66,7 @@ final lightColorScheme = ColorScheme(
   onBackground: Color(0xFF121212),
   onPrimary: Colors.white,
   onSecondary: Colors.white,
-  onSurface: Colors.white,
+  onSurface: Colors.black,
   onError: Colors.white,
 );
 
