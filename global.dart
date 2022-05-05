@@ -347,6 +347,8 @@ class Global {
 
   void setAdditionalData(String namespace, dynamic data) {
     this.additionalData.value![namespace] = data;
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    this.additionalData.notifyListeners();
   }
 
   void redirectToLogin() async {
