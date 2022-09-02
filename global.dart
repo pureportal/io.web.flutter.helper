@@ -18,12 +18,13 @@ class Global {
   static final Global _singleton = Global._();
   final Future<SharedPreferences> prefs = SharedPreferences.getInstance();
   ValueNotifier<String?> locale = ValueNotifier<String?>(null);
-  ValueNotifier<String?> title = ValueNotifier<String?>("BeeLopt");
+  ValueNotifier<String?> title = ValueNotifier<String?>("");
   ValueNotifier<bool> loaded = ValueNotifier<bool>(false);
   ValueNotifier<String?> theme = ValueNotifier<String?>(null);
   ValueNotifier<Map<String, dynamic>?> userData = ValueNotifier<Map<String, dynamic>?>(null);
   ValueNotifier<String?> viewAs = ValueNotifier<String?>(null);
   ValueNotifier<Map<String, dynamic>?> additionalData = ValueNotifier<Map<String, dynamic>?>({});
+  List<String> _additionalDataPersistent = [];
   String? appName;
   String? packageName;
   String? version;
@@ -287,7 +288,7 @@ class Global {
             // Redirect to URL without code in URL
             //window.top.location.href = '/' + window.location.pathname;
             if (kIsWeb) {
-              html.window.top?.location.href = '/project';
+              html.window.top?.location.href = '/';
             }
 
             return true;
@@ -345,10 +346,72 @@ class Global {
     }
   }
 
-  void setAdditionalData(String namespace, dynamic data) {
+  void setAdditionalData(String namespace, dynamic data) async {
     this.additionalData.value![namespace] = data;
     // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
     this.additionalData.notifyListeners();
+
+    // Save to preferences if in persistent list
+    if (_additionalDataPersistent.contains(namespace)) {
+      print("Saving additional data to preferences");
+      // Load persistent data
+      await prefs.then((SharedPreferences prefs) {
+        Map<String, dynamic> savedData = {};
+        // Check if additional data is saved in preferences
+        if (prefs.containsKey("additionalData")) {
+          savedData = jsonDecode(prefs.getString("additionalData")!);
+        }
+        savedData[namespace] = data;
+        prefs.setString("additionalData", jsonEncode(savedData));
+      });
+    }
+  }
+
+  void removeAdditionalData(String namespace) async {
+    this.additionalData.value!.remove(namespace);
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    this.additionalData.notifyListeners();
+
+    // Save to preferences if in persistent list
+    if (_additionalDataPersistent.contains(namespace)) {
+      print("Saving additional data to preferences");
+      // Load persistent data
+      await prefs.then((SharedPreferences prefs) {
+        Map<String, dynamic> savedData = {};
+        // Check if additional data is saved in preferences
+        if (prefs.containsKey("additionalData")) {
+          savedData = jsonDecode(prefs.getString("additionalData")!);
+        }
+        savedData.remove(namespace);
+        prefs.setString("additionalData", jsonEncode(savedData));
+      });
+    }
+  }
+
+  dynamic getAdditionalData(String namespace, dynamic fallback) {
+    // Check if namespace exists
+    if (this.additionalData.value!.containsKey(namespace)) {
+      return this.additionalData.value![namespace];
+    } else {
+      return fallback;
+    }
+  }
+
+  void setAdditionalDataPersistent(List<String> namespaces) {
+    this._additionalDataPersistent = namespaces;
+
+    // Load persistent data
+    prefs.then((SharedPreferences prefs) {
+      // Check if additional data is saved in preferences
+      if (prefs.containsKey("additionalData")) {
+        Map<String, dynamic> data = jsonDecode(prefs.getString("additionalData")!);
+        for (String namespace in namespaces) {
+          if (data.containsKey(namespace)) {
+            this.additionalData.value![namespace] = data[namespace];
+          }
+        }
+      }
+    });
   }
 
   void redirectToLogin() async {
