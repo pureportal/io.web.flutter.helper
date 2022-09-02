@@ -23,6 +23,7 @@ class Global {
   ValueNotifier<String?> theme = ValueNotifier<String?>(null);
   ValueNotifier<Map<String, dynamic>?> userData = ValueNotifier<Map<String, dynamic>?>(null);
   ValueNotifier<String?> viewAs = ValueNotifier<String?>(null);
+  ValueNotifier<Map<String, dynamic>?> additionalData = ValueNotifier<Map<String, dynamic>?>({});
   String? appName;
   String? packageName;
   String? version;
@@ -345,6 +346,12 @@ class Global {
     }
   }
 
+  void setAdditionalData(String namespace, dynamic data) {
+    this.additionalData.value![namespace] = data;
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    this.additionalData.notifyListeners();
+  }
+
   void redirectToLogin() async {
     if (!kIsWeb) {
       try {
@@ -421,5 +428,17 @@ class Global {
     } else {
       return value.toStringAsFixed(precision);
     }
+  }
+
+  static String secondsToTimeFormat(int seconds, {bool showSeconds = true}) {
+    var _hours = (seconds / 3600).floor();
+    var _minutes = ((seconds - (_hours * 3600)) / 60).floor();
+    var _seconds = seconds - (_hours * 3600) - (_minutes * 60);
+
+    return "${_hours < 10 ? "0$_hours" : _hours}:${_minutes < 10 ? "0$_minutes" : _minutes}${showSeconds ? ":${_seconds < 10 ? "0$_seconds" : _seconds}" : ""}";
+  }
+
+  static timeOverlap(int start1, int end1, int start2, int end2) {
+    return ((start1) < (end2) && (start2) < (end1) ? true : false);
   }
 }
