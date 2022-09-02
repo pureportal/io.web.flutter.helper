@@ -41,6 +41,7 @@ class Global {
   final String oauthClientId = dotenv.env['OAUTH_CLIENT_ID'] ?? '';
   final String oauthScopes = dotenv.env['OAUTH_SCOPES'] ?? '';
   final String apiBackendUrl = dotenv.env['API_BACKEND'] ?? '';
+  final String oauthLogout = dotenv.env['OAUTH_LOGOUT'] ?? '';
   final String redirectUrl = Uri.encodeComponent("${html.window.location.protocol}//${html.window.location.hostname}:${html.window.location.protocol == 'https:' ? '' : html.window.location.port}");
   bool refreshTokenOngoing = false;
   ValueNotifier<String?> refreshToken = ValueNotifier<String?>(null);
@@ -124,7 +125,7 @@ class Global {
     if (!kIsWeb) {
       this.showLoginPage.value = true;
     } else {
-      html.window.location.href = "https://beewatec.de";
+      html.window.location.href = oauthLogout;
     }
   }
 
@@ -273,7 +274,7 @@ class Global {
 
   Future<bool> tryToExchangeCodeForToken(String code) async {
     try {
-      print("Try to exchange code for token");
+      print("Try to exchange code for token using: ${Global.instance().oauthToken}");
       final response = await http.post(Uri.parse("${Global.instance().oauthToken}"), headers: {"Content-Type": "application/json"}, body: jsonEncode({"code": code}));
       if (response.statusCode == 200) {
         Map data = jsonDecode(response.body);
