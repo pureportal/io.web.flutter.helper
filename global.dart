@@ -18,11 +18,13 @@ class Global {
   static final Global _singleton = Global._();
   final Future<SharedPreferences> prefs = SharedPreferences.getInstance();
   ValueNotifier<String?> locale = ValueNotifier<String?>(null);
-  ValueNotifier<String?> title = ValueNotifier<String?>("BeeLopt");
+  ValueNotifier<String?> title = ValueNotifier<String?>("");
   ValueNotifier<bool> loaded = ValueNotifier<bool>(false);
   ValueNotifier<String?> theme = ValueNotifier<String?>(null);
   ValueNotifier<Map<String, dynamic>?> userData = ValueNotifier<Map<String, dynamic>?>(null);
   ValueNotifier<String?> viewAs = ValueNotifier<String?>(null);
+  ValueNotifier<Map<String, dynamic>?> additionalData = ValueNotifier<Map<String, dynamic>?>({});
+  List<String> _additionalDataPersistent = [];
   String? appName;
   String? packageName;
   String? version;
@@ -39,6 +41,7 @@ class Global {
   final String oauthClientId = dotenv.env['OAUTH_CLIENT_ID'] ?? '';
   final String oauthScopes = dotenv.env['OAUTH_SCOPES'] ?? '';
   final String apiBackendUrl = dotenv.env['API_BACKEND'] ?? '';
+  final String oauthLogout = dotenv.env['OAUTH_LOGOUT'] ?? '';
   final String redirectUrl = Uri.encodeComponent("${html.window.location.protocol}//${html.window.location.hostname}:${html.window.location.protocol == 'https:' ? '' : html.window.location.port}");
   bool refreshTokenOngoing = false;
   ValueNotifier<String?> refreshToken = ValueNotifier<String?>(null);
@@ -283,7 +286,7 @@ class Global {
 
   Future<bool> tryToExchangeCodeForToken(String code) async {
     try {
-      print("Try to exchange code for token");
+      print("Try to exchange code for token using: ${Global.instance().oauthToken}");
       final response = await http.post(Uri.parse("${Global.instance().oauthToken}"), headers: {"Content-Type": "application/json"}, body: jsonEncode({"code": code}));
       if (response.statusCode == 200) {
         Map data = jsonDecode(response.body);
@@ -298,7 +301,7 @@ class Global {
             // Redirect to URL without code in URL
             //window.top.location.href = '/' + window.location.pathname;
             if (kIsWeb) {
-              html.window.top?.location.href = '/project';
+              html.window.top?.location.href = '/';
             }
 
             return true;
@@ -355,6 +358,74 @@ class Global {
     } catch (error) {
       print("Failed to load user data:" + error.toString());
     }
+  }
+
+  void setAdditionalData(String namespace, dynamic data) async {
+    this.additionalData.value![namespace] = data;
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    this.additionalData.notifyListeners();
+
+    // Save to preferences if in persistent list
+    if (_additionalDataPersistent.contains(namespace)) {
+      print("Saving additional data to preferences");
+      // Load persistent data
+      await prefs.then((SharedPreferences prefs) {
+        Map<String, dynamic> savedData = {};
+        // Check if additional data is saved in preferences
+        if (prefs.containsKey("additionalData")) {
+          savedData = jsonDecode(prefs.getString("additionalData")!);
+        }
+        savedData[namespace] = data;
+        prefs.setString("additionalData", jsonEncode(savedData));
+      });
+    }
+  }
+
+  void removeAdditionalData(String namespace) async {
+    this.additionalData.value!.remove(namespace);
+    // ignore: invalid_use_of_visible_for_testing_member, invalid_use_of_protected_member
+    this.additionalData.notifyListeners();
+
+    // Save to preferences if in persistent list
+    if (_additionalDataPersistent.contains(namespace)) {
+      print("Saving additional data to preferences");
+      // Load persistent data
+      await prefs.then((SharedPreferences prefs) {
+        Map<String, dynamic> savedData = {};
+        // Check if additional data is saved in preferences
+        if (prefs.containsKey("additionalData")) {
+          savedData = jsonDecode(prefs.getString("additionalData")!);
+        }
+        savedData.remove(namespace);
+        prefs.setString("additionalData", jsonEncode(savedData));
+      });
+    }
+  }
+
+  dynamic getAdditionalData(String namespace, dynamic fallback) {
+    // Check if namespace exists
+    if (this.additionalData.value!.containsKey(namespace)) {
+      return this.additionalData.value![namespace];
+    } else {
+      return fallback;
+    }
+  }
+
+  void setAdditionalDataPersistent(List<String> namespaces) {
+    this._additionalDataPersistent = namespaces;
+
+    // Load persistent data
+    prefs.then((SharedPreferences prefs) {
+      // Check if additional data is saved in preferences
+      if (prefs.containsKey("additionalData")) {
+        Map<String, dynamic> data = jsonDecode(prefs.getString("additionalData")!);
+        for (String namespace in namespaces) {
+          if (data.containsKey(namespace)) {
+            this.additionalData.value![namespace] = data[namespace];
+          }
+        }
+      }
+    });
   }
 
   void redirectToLogin() async {
@@ -433,5 +504,17 @@ class Global {
     } else {
       return value.toStringAsFixed(precision);
     }
+  }
+
+  static String secondsToTimeFormat(int seconds, {bool showSeconds = true}) {
+    var _hours = (seconds / 3600).floor();
+    var _minutes = ((seconds - (_hours * 3600)) / 60).floor();
+    var _seconds = seconds - (_hours * 3600) - (_minutes * 60);
+
+    return "${_hours < 10 ? "0$_hours" : _hours}:${_minutes < 10 ? "0$_minutes" : _minutes}${showSeconds ? ":${_seconds < 10 ? "0$_seconds" : _seconds}" : ""}";
+  }
+
+  static timeOverlap(int start1, int end1, int start2, int end2) {
+    return ((start1) < (end2) && (start2) < (end1) ? true : false);
   }
 }
