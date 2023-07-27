@@ -61,7 +61,7 @@ class Global {
       // Load theme
       this.theme.value = prefs.getString("THEME");
 
-      // If path is "logout" -> Remove tokens and redirect to homepage
+      // If path is "logout" -> Remove tokens and redirect to homepage or redirect url
       if (html.window.location.pathname?.startsWith("/logout") ?? false) {
         this.logout();
       } else {
@@ -98,12 +98,19 @@ class Global {
         }
       }
 
+      // Load user data interval
+      Timer.periodic(Duration(seconds: 10), (Timer t) async {
+        await loadUserData();
+      });
+
+      // Load package info
       PackageInfo packageInfo = await PackageInfo.fromPlatform();
       appName = packageInfo.appName;
       packageName = packageInfo.packageName;
       version = packageInfo.version;
       buildNumber = packageInfo.buildNumber;
 
+      // Set loaded to true
       loaded.value = true;
     });
   }
@@ -122,7 +129,12 @@ class Global {
     if (!kIsWeb) {
       this.showLoginPage.value = true;
     } else {
-      html.window.location.href = "https://beewatec.de";
+      // Check if redirect url exists in environment as OAUTH_LOGOUT
+      if (dotenv.env['OAUTH_LOGOUT'] != null && dotenv.env['OAUTH_LOGOUT'] != '') {
+        html.window.location.href = dotenv.env['OAUTH_LOGOUT']!;
+      } else {
+        html.window.location.href = "https://beewatec.de";
+      }
     }
   }
 
@@ -327,11 +339,13 @@ class Global {
 
   Future loadUserData() async {
     try {
+      print("ASDASDSD");
       final response = await Global.instance().dioSecuredApi.get("$apiBackendUrl/users/me");
       if (response.statusCode == 200) {
         Map data = response.data;
         if (data["success"] == true) {
           this.userData.value = data["data"];
+          print("User data loaded");
         } else {
           throw ("Server reply: Invalid JWT");
         }
@@ -340,7 +354,6 @@ class Global {
       }
     } catch (error) {
       print("Failed to load user data:" + error.toString());
-      Timer(Duration(seconds: 1), loadUserData);
     }
   }
 
